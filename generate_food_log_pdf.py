@@ -15,9 +15,10 @@ from reportlab.platypus import (
 )
 
 CUSTOM_COLORS = {
+    'Meal Type': colors.blue,
     'Calories': colors.lightcyan,
-    'Portion': colors.lightseagreen,
-    'Carbs': colors.lightgoldenrodyellow,
+    'Portion': colors.papayawhip,
+    'Carbs': colors.peachpuff,
     'Protein': colors.lightgreen,
     'Fat': colors.lightyellow,
     'Sugar': colors.pink,
@@ -98,7 +99,6 @@ def create_item_table(group):
 
         # Alignment
         ('ALIGN', (0, 0), (1, -1), 'LEFT'),  # Item and Meal Type left-aligned
-        ('ALIGN', (2, 0), (-1, -1), 'RIGHT'),  # Portion and Macros right-aligned
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
 
         # Padding
@@ -141,7 +141,7 @@ def generate_weekly_totals_table(df, story):
             f"{week_sum[col]}{' cal' if col == 'calories' else ' g'}" for col in NUMERIC_COLS
         ]
         weekly_summaries.append(row)
-    table = Table(weekly_summaries, hAlign='LEFT', repeatRows=1, colWidths=[1.0 * inch, 1.0 * inch,1.0 * inch,1.0 * inch, None])
+    table = Table(weekly_summaries, hAlign='LEFT', repeatRows=1, colWidths=[1.5 * inch, 1.0 * inch,1.0 * inch,1.0 * inch, None])
     style = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F8F9FA')),
         ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#212529')),
@@ -191,9 +191,25 @@ def build_pdf_story(df):
     generate_daily_entries(df, story)
     return story
 
+def is_exe():
+    """Check if the script is running as a standalone executable."""
+    return getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS')
+
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        # Otherwise, the script is running in a normal Python environment
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
 # replaces column headers with more readable ones (and better for processing)
 def replace_columns(input_csv):
-    with open("columns.csv", 'r') as columnsCsv:
+    path = resource_path("columns.csv")
+    with open(path, 'r') as columnsCsv:
         column_headers = columnsCsv.readline()
     with open(input_csv, "r") as csvfile:
         input_lines = csvfile.readlines()
@@ -234,6 +250,26 @@ def generate_readable_pdf(input_csv: str, output_pdf: str):
     print("built pdf")
 
 
+def center_window(window, width, height):
+    # Ensure the window dimensions are updated and accurate
+    window.update_idletasks()
+
+    # Get screen dimensions
+    screen_width = window.winfo_screenwidth()
+    screen_height = window.winfo_screenheight()
+
+    # Get the current display scale factor
+    scale_factor = window._get_window_scaling()
+
+    # Calculate x and y coordinates for the top-left corner
+    # The calculation ensures the center of the window aligns with the center of the screen
+    x = int(((screen_width / 2) - (width / 2)) * scale_factor)
+    y = int(((screen_height / 2) - (height / 2)) * scale_factor)  # Adjusted y calculation for true center
+
+    # Set the window's geometry
+    window.geometry(f"{width}x{height}+{x}+{y}")
+
+
 def browse_files(window):
     global input_file
 
@@ -246,12 +282,20 @@ def browse_files(window):
     print(input_file)
     window.destroy()
 
+
 def select_file():
     global input_file
     window = ctk.CTk()
-    window.title("Select a File")
+    window.title("Food Log PDF Generator")
+    # hack for center spacing
+    invisible_text = ctk.CTkLabel(window, text="")
+    invisible_text.pack(pady=10)
+    text = ctk.CTkLabel(window, text="Select a file to generate a pdf")
+    text.pack(pady=5)
     button = ctk.CTkButton(window, text="Browse Files", command=lambda: browse_files(window))
-    button.pack(padx=50, pady=50)
+    button.place(y=-20)
+    button.pack(padx=50)
+    center_window(window, 350, 200)
     window.mainloop()
 
 
