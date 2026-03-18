@@ -7,8 +7,10 @@ import customtkinter as ctk
 import pandas as pd
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, landscape
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
     BaseDocTemplate, Frame, PageTemplate, Paragraph,
     Table, TableStyle, PageBreak, Spacer
@@ -28,7 +30,7 @@ NUMERIC_COLS = ['calories', 'protein', 'fat', 'sugar', 'fiber', 'carbs']
 MEAL_SORT_ORDER = {"Breakfast": 1, "Lunch": 2, "Dinner": 3, "Snack": 4}
 STYLES = getSampleStyleSheet()
 input_file = ""
-
+pdfmetrics.registerFont(TTFont('Arial', 'arial.ttf'))
 
 def load_and_preprocess_csv(csv_path):
     df = pd.read_csv(csv_path)
@@ -79,7 +81,11 @@ def create_item_table(group):
     headers = ['Item', 'Meal Type', 'Portion'] + [col.title() for col in NUMERIC_COLS]
     data = [headers]
 
-    item_style = STYLES['Normal']
+    item_style = ParagraphStyle(
+        'UnicodeNormal',
+        parent=STYLES['Normal'],
+        fontName='Arial'
+    )
     col_widths = [3.5 * inch, 1.0 * inch, 1.0 * inch] + [0.65 * inch] * len(NUMERIC_COLS)
 
     for _, row in group.iterrows():
@@ -209,9 +215,9 @@ def resource_path(relative_path):
 # replaces column headers with more readable ones (and better for processing)
 def replace_columns(input_csv):
     path = resource_path("columns.csv")
-    with open(path, 'r') as columnsCsv:
+    with open(path, 'r', encoding='utf-8') as columnsCsv:
         column_headers = columnsCsv.readline()
-    with open(input_csv, "r") as csvfile:
+    with open(input_csv, "r", encoding='utf-8') as csvfile:
         input_lines = csvfile.readlines()
         csvfile.seek(0) # moves back to start of file
         input_lines[0] = column_headers
